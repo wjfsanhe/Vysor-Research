@@ -357,7 +357,7 @@ public class Main
         final Method declaredMethod = Class.forName("android.os.ServiceManager").getDeclaredMethod("getService", String.class);
         final IClipboard interface1 = IClipboard.Stub.asInterface((IBinder)declaredMethod.invoke(null, "clipboard"));
         final IOnPrimaryClipChangedListener.Stub stub = new IOnPrimaryClipChangedListener.Stub() {
-            public void dispatchPrimaryClipChanged() throws RemoteException {
+            public void dispatchPrimaryClipChanged() throws RemoteException {//cross platform send clipboard message.
                 if (Main.webSocket != null) {
                     try {
                         final ClipData primaryClip = interface1.getPrimaryClip("com.android.shell");
@@ -516,7 +516,7 @@ public class Main
             }
         });
         Log.i("VysorMain", "Server starting");
-        final AsyncServerSocket listen = Main.server.listen(null, 53517, new ListenCallback() {
+        final AsyncServerSocket listen = Main.server.listen(null, 53517, new ListenCallback() { //passwd Auth. WJF
             StdOutDevice device;
             
             @Override
@@ -694,7 +694,7 @@ public class Main
         }
     }
     
-    static void sendEvent(final JSONObject jsonObject) {
+    static void sendEvent(final JSONObject jsonObject) {//web socket send string . Json ..
         if (Main.webSocket instanceof WebSocket) {
             ((WebSocket)Main.webSocket).send(jsonObject.toString());
         }

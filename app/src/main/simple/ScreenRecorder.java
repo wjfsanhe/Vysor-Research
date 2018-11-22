@@ -154,7 +154,7 @@ public class ScreenRecorder extends Thread {
         // should happen before receiving buffers, and should only happen once
         if (mMuxerStarted) {
             throw new IllegalStateException("output format already changed!");
-        }
+        }AsyncHttpServerResponse
         MediaFormat newFormat = mEncoder.getOutputFormat();
 
         Log.i(TAG, "output format changed.\n new format: " + newFormat.toString());

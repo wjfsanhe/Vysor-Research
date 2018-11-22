@@ -103,6 +103,7 @@ public abstract class EncoderDevice {
             return null;
         }
         // 根据视频质量计算相关参数
+        //maybe we need high resolution.
         MediaFormat mediaFormat = MediaFormat.createVideoFormat(Param.MIME_TYPE, Param.ScreenWIDTH, Param.ScreenHEIGHT);
         mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
         mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, Param.BITRATE);

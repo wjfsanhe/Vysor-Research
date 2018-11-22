@@ -35,7 +35,7 @@ public class WebSocketImpl implements WebSocket
     private AsyncSocket mSocket;
     private StringCallback mStringCallback;
     private LinkedList<ByteBufferList> pending;
-    
+    //called by client.
     public WebSocketImpl(final AsyncSocket mSocket) {
         this.mSocket = mSocket;
         this.mSink = new BufferedDataSink(this.mSocket);
@@ -54,7 +54,7 @@ public class WebSocketImpl implements WebSocket
             asyncHttpServerResponse.getHeaders().set("Sec-WebSocket-Protocol", value);
         }
         asyncHttpServerResponse.writeHead();
-        this.setupParser(false, false);
+        this.setupParser(false, false); //server
     }
     
     private static String SHA1(final String s) {
@@ -106,7 +106,7 @@ public class WebSocketImpl implements WebSocket
             asyncHttpRequest.getHeaders().set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/27.0.1453.15 Safari/537.36");
         }
     }
-    
+    //called by client.
     public static WebSocket finishHandshake(final Headers headers, final AsyncHttpResponse asyncHttpResponse) {
         WebSocketImpl webSocketImpl = null;
         if (asyncHttpResponse != null) {
@@ -135,7 +135,7 @@ public class WebSocketImpl implements WebSocket
                                     }
                                 }
                                 webSocketImpl = new WebSocketImpl(asyncHttpResponse.detachSocket());
-                                webSocketImpl.setupParser(true, b);
+                                webSocketImpl.setupParser(true, b);//setup message callback. client
                             }
                         }
                     }

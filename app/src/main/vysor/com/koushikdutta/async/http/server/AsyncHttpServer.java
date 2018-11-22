@@ -514,9 +514,10 @@ public class AsyncHttpServer
     public void websocket(final String s, final WebSocketRequestCallback webSocketRequestCallback) {
         this.websocket(s, null, webSocketRequestCallback);
     }
-    
+    //vysor is websocket server.
     public void websocket(final String s, final String s2, final WebSocketRequestCallback webSocketRequestCallback) {
-        this.get(s, new HttpServerRequestCallback() {
+        //websocket first handshake , incoming request from client is standard http request. then upgrade to websocket protocol.
+        this.get(s, new HttpServerRequestCallback() {// first is get request.
             @Override
             public void onRequest(final AsyncHttpServerRequest asyncHttpServerRequest, final AsyncHttpServerResponse asyncHttpServerResponse) {
                 final String value = asyncHttpServerRequest.getHeaders().get("Connection");

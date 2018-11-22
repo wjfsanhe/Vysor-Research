@@ -3,6 +3,7 @@ package com.koushikdutta.virtualdisplay;
 import android.media.MediaCodec;
 import android.media.MediaFormat;
 import android.os.Bundle;
+import android.util.Log;
 
 import com.koushikdutta.async.BufferedDataSink;
 import com.koushikdutta.async.ByteBufferList;
@@ -13,6 +14,7 @@ import java.nio.ByteOrder;
 import java.util.concurrent.TimeUnit;
 
 public class StdOutDevice extends EncoderDevice {
+    private final String TAG = "VRBridge";
     int bitrate;
     ByteBuffer codecPacket;
     OutputBufferCallback outputBufferCallback;
@@ -61,6 +63,7 @@ public class StdOutDevice extends EncoderDevice {
         @Override
         protected void encode() throws Exception {
             System.out.print("Writer started." + "\n");
+            Log.d(TAG, "Writer started." );
             ByteBuffer[] outputBuffers = null;
             int i = 0;
             while (i == 0) {
@@ -76,32 +79,41 @@ public class StdOutDevice extends EncoderDevice {
                         byteBuffer.limit(bufferInfo.offset + bufferInfo.size);
                         codecPacket = ByteBuffer.allocate(bufferInfo.size);
                         codecPacket.put(byteBuffer);
-                        codecPacket.flip();
+                        codecPacket.flip(); //raw codec packet.
                     }
                     ByteBuffer order = ByteBufferList.obtain(12 + bufferInfo.size).order(ByteOrder.LITTLE_ENDIAN);
                     order.putInt(bufferInfo.size + 12 - 4);
-                    order.putInt((int) TimeUnit.MICROSECONDS.toMillis(bufferInfo.presentationTimeUs));
+                    int pts = (int) TimeUnit.MICROSECONDS.toMillis(bufferInfo.presentationTimeUs);
+                    order.putInt(pts);
+                    Log.d(TAG, "write one Buffer chunk " + "len = " + bufferInfo.size + " , pts = " + pts);
                     int n2;
                     if ((0x1 & bufferInfo.flags) != 0x0) {
                         n2 = 1;
                     } else {
                         n2 = 0;
                     }
-                    order.putInt(n2);
+                    order.putInt(n2); //order with spec info
                     byteBuffer.position(bufferInfo.offset);
                     byteBuffer.limit(bufferInfo.offset + bufferInfo.size);
                     order.put(byteBuffer);
                     order.flip();
+                    //BUFFER FORMAT
+                    // 0-3  SIZE
+                    // 4-7  PTS
+                    // 8-11 flag  (IFRAME END_OF_STREAM)
+                    // 12   payload data ()
+                    // so the first 12 bytes is keyinfo. used by peer end.
+                    // maybe we can add special bytes.
                     byteBuffer.clear();
                     byte[] byteBuffers = toBytes(order);
                     if (sink != null && sink.isOpen()) {
-                        sink.write(new ByteBufferList(byteBuffers));
+                        sink.write(new ByteBufferList(byteBuffers)); //write to response.
                     }
                     if (outputBufferCallback != null) {
                         outputBufferCallback.onOutputBuffer(byteBuffer, bufferInfo);
                     }
                     mEncoder.releaseOutputBuffer(dequeueOutputBuffer, false);
-                    if ((0x4 & bufferInfo.flags) != 0x0) {
+                    if ((0x4 & bufferInfo.flags) != 0x0) {//if it is end of frame.  0x4 is end of frame.
                         i = 1;
                     } else {
                         i = 0;
@@ -112,7 +124,9 @@ public class StdOutDevice extends EncoderDevice {
                     System.out.print("MediaCodec.INFO_OUTPUT_FORMAT_CHANGED" + "\n");
                     outputFormat = mEncoder.getOutputFormat();
                     System.out.print("output mWidth: " + outputFormat.getInteger("mWidth") + "\n");
+                    Log.d(TAG, "output mWidth: " + outputFormat.getInteger("mWidth"));
                     System.out.print("output mHeight: " + outputFormat.getInteger("mHeight") + "\n");
+                    Log.d(TAG, "output mHeight: " + outputFormat.getInteger("mHeight"));
                 }
             }
             if (sink != null && sink.isOpen()) {

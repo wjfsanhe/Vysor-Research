@@ -597,7 +597,7 @@ public class AsyncHttpClient
     public void insertMiddleware(final AsyncHttpClientMiddleware asyncHttpClientMiddleware) {
         this.mMiddleware.add(0, asyncHttpClientMiddleware);
     }
-    
+    //client end sample code
     public Future<WebSocket> websocket(final AsyncHttpRequest asyncHttpRequest, final String s, final WebSocketConnectCallback webSocketConnectCallback) {
         WebSocketImpl.addWebSocketUpgradeHeaders(asyncHttpRequest, s);
         final SimpleFuture<WebSocket> simpleFuture = new SimpleFuture<WebSocket>();
