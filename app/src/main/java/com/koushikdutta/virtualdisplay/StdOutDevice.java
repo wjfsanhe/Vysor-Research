@@ -14,7 +14,7 @@ import java.nio.ByteOrder;
 import java.util.concurrent.TimeUnit;
 
 public class StdOutDevice extends EncoderDevice {
-    private final String TAG = "VRBridge";
+    private final String TAG = "EncoderVR";
     int bitrate;
     ByteBuffer codecPacket;
     OutputBufferCallback outputBufferCallback;

@@ -6,8 +6,8 @@ package com.mzj.vysor;
 
 public class Param {
     public static int LISTEN_PORT = 52174;
-    public static int ScreenWIDTH = 1280;
-    public static int ScreenHEIGHT = 720;
+    public static int ScreenWIDTH = 720;
+    public static int ScreenHEIGHT = 1080;
     public static final int FRAME_RATE = 30;// 帧率
     public static final int IFRAME_INTERVAL = 1;//  I帧间隔
     public static final int TIMEOUT_US = 10 * 1000;

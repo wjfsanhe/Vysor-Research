@@ -9,6 +9,7 @@ import android.os.Looper;
 import android.os.RemoteException;
 import android.os.SystemClock;
 import android.renderscript.ScriptGroup;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.IWindowManager;
 import android.view.InputDevice;
@@ -22,6 +23,7 @@ import com.koushikdutta.async.ByteBufferList;
 import com.koushikdutta.async.DataSink;
 import com.koushikdutta.async.callback.CompletedCallback;
 import com.koushikdutta.async.http.WebSocket;
+import com.koushikdutta.async.http.WebSocketImpl;
 import com.koushikdutta.async.http.server.AsyncHttpServer;
 import com.koushikdutta.async.http.server.AsyncHttpServerRequest;
 import com.koushikdutta.async.http.server.AsyncHttpServerResponse;
@@ -65,11 +67,13 @@ public class Main {
             asyncHttpServer.listen(Param.LISTEN_PORT);
 
             initService();
+			instance.clearProcess();
 
             Point point = SurfaceControlVirtualDisplayFactory.getEncodeSize();
             Param.ScreenWIDTH = point.x;
             Param.ScreenHEIGHT = point.y;
             System.out.print("width = " + Param.ScreenWIDTH + ";height = " + Param.ScreenHEIGHT + "\n");
+			Log.d(TAG, "width = " + Param.ScreenWIDTH + ";height = " + Param.ScreenHEIGHT);
             System.out.print("start" + "\n");
             Log.d(TAG, "service stated");
             System.out.print("service started" + "\n");
@@ -80,7 +84,11 @@ public class Main {
         }
     }
 
-    private static void initService() {
+	private void clearProcess() {
+
+	}
+
+	private static void initService() {
         try {
             getService = Class.forName("android.os.ServiceManager").getDeclaredMethod("getService", String.class);
             mPowerManager = IPowerManager.Stub.asInterface((IBinder)getService.invoke(null, "power"));
@@ -263,6 +271,41 @@ public class Main {
             }
         };
     }
+
+	public void websocket(AsyncHttpServer httpServer, String regex, final String protocol, final AsyncHttpServer.WebSocketRequestCallback callback) {
+		httpServer.get(regex, new HttpServerRequestCallback() {
+			@Override
+			public void onRequest(final AsyncHttpServerRequest request, final AsyncHttpServerResponse response) {
+				boolean hasUpgrade = false;
+				Log.d(TAG, "websocket onRequest coming");
+				String connection = request.getHeaders().get("Connection");
+				if (connection != null) {
+					String[] connections = connection.split(",");
+					for (String c: connections) {
+						if ("Upgrade".equalsIgnoreCase(c.trim())) {
+							hasUpgrade = true;
+							break;
+						}
+					}
+				}
+				Log.d(TAG, "pass upgrade");
+				if (!"websocket".equalsIgnoreCase(request.getHeaders().get("Upgrade")) || !hasUpgrade) {
+					response.code(404);
+					response.end();
+					return;
+				}
+				String peerProtocol = request.getHeaders().get("Sec-WebSocket-Protocol");
+				if (!TextUtils.equals(protocol, peerProtocol)) {
+					response.code(404);
+					response.end();
+					return;
+				}
+				Log.d(TAG, "pass protocol");
+				callback.onConnected(new WebSocketImpl(request, response), request);
+			}
+		});
+	}
+
     /**
      * http
      */
@@ -285,6 +328,28 @@ public class Main {
                 }
             }
         });
+
+		httpServer.get("/config", new HttpServerRequestCallback() {
+			@Override
+			public void onRequest(AsyncHttpServerRequest request, AsyncHttpServerResponse response) {
+				try {
+					JSONObject msg = new JSONObject();
+					msg.put("LISTEN_PORT", Param.LISTEN_PORT);
+					msg.put("ScreenWIDTH", Param.ScreenWIDTH);
+					msg.put("ScreenHEIGHT", Param.ScreenHEIGHT);
+					msg.put("FRAME_RATE", Param.FRAME_RATE);
+					msg.put("IFRAME_INTERVAL", Param.IFRAME_INTERVAL);
+					msg.put("TIMEOUT_US", Param.TIMEOUT_US);
+					msg.put("BITRATE", Param.BITRATE);
+					msg.put("MIME_TYPE", Param.MIME_TYPE);
+					response.send(msg);
+				} catch (Exception e) {
+					response.code(500);
+					response.send(e.toString());
+				}
+			}
+		});
+
         httpServer.get("/h264", new HttpServerRequestCallback() {
             @Override
             public void onRequest(final AsyncHttpServerRequest request, final AsyncHttpServerResponse response) {
@@ -308,20 +373,24 @@ public class Main {
                 Main.looper.quit();
             }
         };
+		Log.d(TAG, "register websocket");
+        websocket(httpServer,"/input", "mirror", (AsyncHttpServer.WebSocketRequestCallback)new AsyncHttpServer.WebSocketRequestCallback() {
         //httpServer.websocket("/input", "mirror", (AsyncHttpServer.WebSocketRequestCallback)new AsyncHttpServer.WebSocketRequestCallback() {
-        httpServer.websocket("/input", (AsyncHttpServer.WebSocketRequestCallback)new AsyncHttpServer.WebSocketRequestCallback() {
+        //httpServer.websocket("/input", (AsyncHttpServer.WebSocketRequestCallback)new AsyncHttpServer.WebSocketRequestCallback() {
             @Override
             public void onConnected(final WebSocket webSocket, final AsyncHttpServerRequest asyncHttpServerRequest) {
+            	Log.d(TAG, "input channel created request coming");
                 if (Main.webSocket != null) {
                     Main.webSocket.setClosedCallback(null);
                 }
                 (Main.webSocket = webSocket).setClosedCallback(completedCallback);
+				Log.d(TAG, "input channel set String callback");
                 webSocket.setStringCallback(createWebSocketHandler(injectInputEvent, mWindowManager, mInputManager, mKeyCharacterMap, mPowerManager));
-				try {
+				/*try {
 					Main.sayHello();
 				} catch (JSONException e) {
 					e.printStackTrace();
-				}
+				}*/
 			}
         });
     }
