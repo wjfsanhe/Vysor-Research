@@ -83,7 +83,8 @@ public class StdOutDevice extends EncoderDevice {
                     }
                     ByteBuffer order = ByteBufferList.obtain(12 + bufferInfo.size).order(ByteOrder.LITTLE_ENDIAN);
                     order.putInt(bufferInfo.size + 12 - 4);
-                    int pts = (int) TimeUnit.MICROSECONDS.toMillis(bufferInfo.presentationTimeUs);
+                    //int pts = (int) TimeUnit.MICROSECONDS.toMillis(bufferInfo.presentationTimeUs);
+                    int pts = 0;
                     order.putInt(pts);
                     Log.d(TAG, "write one Buffer chunk " + "len = " + bufferInfo.size + " , pts = " + pts);
                     int n2;

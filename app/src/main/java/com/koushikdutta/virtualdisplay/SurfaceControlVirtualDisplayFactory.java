@@ -57,7 +57,23 @@ public class SurfaceControlVirtualDisplayFactory implements VirtualDisplayFactor
         }
         return currentDisplaySize;
     }
-
+    Rect getCurrentViewport(int oritation) {
+        final Point displaySize = SurfaceControlVirtualDisplayFactory.this.displaySize;
+        SurfaceControlVirtualDisplayFactory.this.displaySize =
+                SurfaceControlVirtualDisplayFactory.getCurrentDisplaySize();
+        Log.d(LOGTAG, "old displaysize = " + displaySize.toString() + ", new display size = "
+                + SurfaceControlVirtualDisplayFactory.this.displaySize.toString());
+        //viewport portrait.
+        final Rect rect = new Rect(0, 0, SurfaceControlVirtualDisplayFactory.this.displaySize.x,
+                SurfaceControlVirtualDisplayFactory.this.displaySize.y);
+        //landscape
+        if (oritation == 1) {
+            rect.right = SurfaceControlVirtualDisplayFactory.this.displaySize.y;
+            rect.bottom = SurfaceControlVirtualDisplayFactory.this.displaySize.x;
+        }
+        Log.d(LOGTAG, "oritation is " + oritation);
+        return rect;
+    }
     @Override
     public VirtualDisplay createVirtualDisplay(final String s, final int width, final int height, final int n3, final int n4, final Surface surface, final Handler handler) {
         try {
@@ -69,35 +85,35 @@ public class SurfaceControlVirtualDisplayFactory implements VirtualDisplayFactor
             final Method declaredMethod4 = forName.getDeclaredMethod("openTransaction", (Class<?>[]) new Class[0]);
             final Method declaredMethod5 = forName.getDeclaredMethod("closeTransaction", (Class<?>[]) new Class[0]);
             final Method declaredMethod6 = Class.forName("android.os.ServiceManager").getDeclaredMethod("getService", String.class);
+            IWindowManager wm = IWindowManager.Stub.asInterface((IBinder) declaredMethod6.invoke(null, "window"));
             this.displayRect = new Rect(0, 0, width, height);
+            //final Rect rect = getCurrentViewport(wm.getRotation());
             final Rect rect = new Rect(0, 0, this.displaySize.x, this.displaySize.y);
             declaredMethod4.invoke(null);
             declaredMethod.invoke(null, binder, surface);
             declaredMethod2.invoke(null, binder, 0, rect, this.displayRect);
             declaredMethod3.invoke(null, binder, 0);
             declaredMethod5.invoke(null);
+            Log.d(LOGTAG, "create virtual display");
+
             return new VirtualDisplay() {
                 final Method destroyDisplayMethod = forName.getDeclaredMethod("destroyDisplay", IBinder.class);
                 IRotationWatcher watcher;
                 IWindowManager wm = IWindowManager.Stub.asInterface((IBinder) declaredMethod6.invoke(null, "window"));
-
                 {
                     try {
                         this.wm.watchRotation(new IRotationWatcher.Stub() {
                             public void onRotationChanged(final int n) throws RemoteException {
-                                final Point displaySize = SurfaceControlVirtualDisplayFactory.this.displaySize;
-                                SurfaceControlVirtualDisplayFactory.this.displaySize =
-                                        SurfaceControlVirtualDisplayFactory.getCurrentDisplaySize();
-                                if (!displaySize.equals(SurfaceControlVirtualDisplayFactory.this.displaySize)) {
-                                    try {
-                                        final Rect rect = new Rect(0, 0, SurfaceControlVirtualDisplayFactory.this.displaySize.x,
-                                                SurfaceControlVirtualDisplayFactory.this.displaySize.y);
-                                        declaredMethod4.invoke(null);
-                                        declaredMethod2.invoke(null, binder, 0, rect, SurfaceControlVirtualDisplayFactory.this.displayRect);
-                                        declaredMethod5.invoke(null);
-                                    } catch (Exception ex) {
-                                        throw new AssertionError(ex);
-                                    }
+                                Log.d(LOGTAG,"rotation changed rotation = " + n);
+                                Rect rect = SurfaceControlVirtualDisplayFactory.this.getCurrentViewport(n);
+                                try {
+                                    Log.d(LOGTAG, "virtual display viewport  width = " + rect.width() + ", height = " + rect.height());
+                                    Log.d(LOGTAG, "virtual display frame  width = " + displayRect.width() + ", height = " + displayRect.height());
+                                    declaredMethod4.invoke(null);
+                                    declaredMethod2.invoke(null, binder, 0, rect, SurfaceControlVirtualDisplayFactory.this.displayRect);
+                                    declaredMethod5.invoke(null);
+                                } catch (Exception ex) {
+                                    throw new AssertionError(ex);
                                 }
                             }
                         });

@@ -11,6 +11,8 @@ import android.os.SystemClock;
 import android.renderscript.ScriptGroup;
 import android.text.TextUtils;
 import android.util.Log;
+import android.view.Display;
+import android.view.IRotationWatcher;
 import android.view.IWindowManager;
 import android.view.InputDevice;
 import android.view.InputEvent;
@@ -212,6 +214,7 @@ public class Main {
 
                     if ("wakeup".equals(type)) {
 						turnScreenOn(inputManager, method, powerManager);
+						sendDisplayInfo();
 					}
 
                     //next op is mutual operation.
@@ -332,11 +335,14 @@ public class Main {
 		httpServer.get("/config", new HttpServerRequestCallback() {
 			@Override
 			public void onRequest(AsyncHttpServerRequest request, AsyncHttpServerResponse response) {
+				Point point = new Point();
+
 				try {
+					mWindowManager.getInitialDisplaySize(0, point);
 					JSONObject msg = new JSONObject();
 					msg.put("LISTEN_PORT", Param.LISTEN_PORT);
-					msg.put("ScreenWIDTH", Param.ScreenWIDTH);
-					msg.put("ScreenHEIGHT", Param.ScreenHEIGHT);
+					msg.put("ScreenWIDTH", point.x);
+					msg.put("ScreenHEIGHT", point.y);
 					msg.put("FRAME_RATE", Param.FRAME_RATE);
 					msg.put("IFRAME_INTERVAL", Param.IFRAME_INTERVAL);
 					msg.put("TIMEOUT_US", Param.TIMEOUT_US);
@@ -384,6 +390,17 @@ public class Main {
                     Main.webSocket.setClosedCallback(null);
                 }
                 (Main.webSocket = webSocket).setClosedCallback(completedCallback);
+				try {
+					mWindowManager.watchRotation(new IRotationWatcher.Stub() {
+						public void onRotationChanged(final int n) throws RemoteException {
+							if (Main.webSocket != null) {
+								Main.sendDisplayInfo();
+							}
+						}
+					});
+				} catch (RemoteException e) {
+					e.printStackTrace();
+				}
 				Log.d(TAG, "input channel set String callback");
                 webSocket.setStringCallback(createWebSocketHandler(injectInputEvent, mWindowManager, mInputManager, mKeyCharacterMap, mPowerManager));
 				/*try {
@@ -394,4 +411,28 @@ public class Main {
 			}
         });
     }
+	static void sendDisplayInfo() {
+		final Point currentDisplaySize = SurfaceControlVirtualDisplayFactory.getCurrentDisplaySize();
+		final JSONObject jsonObject = new JSONObject();
+		while (true) {
+			try {
+				jsonObject.put("type", (Object)"displaySize");
+				jsonObject.put("screenWidth", currentDisplaySize.x);
+				jsonObject.put("screenHeight", currentDisplaySize.y);
+				jsonObject.put("nav", hasNavBar());
+				jsonObject.put("rotation", mWindowManager.getRotation() );
+				sendEvent(jsonObject);
+			} catch (JSONException e) {
+				e.printStackTrace();
+			} catch (RemoteException e) {
+				e.printStackTrace();
+			}
+			break;
+		}
+	}
+	private static boolean hasNavBar() {
+		final boolean deviceHasKey = KeyCharacterMap.deviceHasKey(4);
+		final boolean deviceHasKey2 = KeyCharacterMap.deviceHasKey(3);
+		return deviceHasKey && deviceHasKey2;
+	}
 }
